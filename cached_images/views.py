@@ -1,16 +1,16 @@
 from django.views import View
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from . import cache_file
 
+@method_decorator(csrf_exempt, name='dispatch')
 class CachedUploadView(View):
     """
     View for uploading files or images to the cache
     """
-    def __init__(self, *args, **kwargs):
-        self.base_key = kwargs.pop('base_key', None)
-        self.cache_name = kwargs.pop('cache_name', None)
-        super().__init__(*args, **kwargs)
-
+    base_key = None
+    cache_name = 'default'
 
     def post(self, request):
         upload = request.FILES['file']

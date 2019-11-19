@@ -3,7 +3,7 @@ from django.conf import settings
 
 
 
-def cache_file(upload, base_key=None, cache_name='default'):
+def cache_file(upload, base_key=None, cache_name='default', timeout=None):
     """
     Generates a key and stores the file at that key
     Returns the key for retrieving the file later
@@ -14,8 +14,13 @@ def cache_file(upload, base_key=None, cache_name='default'):
     hsh = hash(upload.read(upload.DEFAULT_CHUNK_SIZE))
     cache = caches[cache_name]
     
-    key = base_key or settings.get('CACHED_FILE_KEY', '')
-    cache.set(settings.CACHED_FILE_KEY + hsh, upload, settings.CACHED_FILE_TIMEOUT)
+    key = base_key or getattr(settings, 'CACHED_FILE_KEY', '')
+    timeout = timeout or getattr(settings, 'CACHED_FILE_TIMEOUT', None)
+    if timeout:
+        cache.set(key + str(hsh), upload, timeout)
+    else:
+        cache.set(key + str(hsh), upload)
+    return key + str(hsh)
 
 
 
