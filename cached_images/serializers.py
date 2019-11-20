@@ -11,6 +11,8 @@ class CachedFileField(serializers.FileField):
 class CachedImageField(serializers.ImageField):
     def to_internal_value(self, key):
         upload = get_file(key)
-        return super().to_internal_value(upload)
+        upload.seek(0)
+        value = super().to_internal_value(upload)
+        return value
 
 
