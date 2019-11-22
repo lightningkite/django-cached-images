@@ -1,4 +1,6 @@
 from django.core.cache import caches
+from django.core.files.base import ContentFile
+from uuid import uuid4
 from django.conf import settings
 
 
@@ -10,20 +12,39 @@ def cache_file(upload, base_key=None, cache_name='default', timeout=None):
     """
     if not upload:
         raise Error('There is no upload file')
-    upload.open()
-    hsh = hash(upload.read(upload.DEFAULT_CHUNK_SIZE))
     cache = caches[cache_name]
-    
-    key = base_key or getattr(settings, 'CACHED_FILE_KEY', '')
+
+    base_key = base_key or getattr(settings, 'CACHED_FILE_KEY', '')
     timeout = timeout or getattr(settings, 'CACHED_FILE_TIMEOUT', None)
+    
+    keys = []
+
+    upload.open()
+    for chunk in upload.chunks():
+        hsh = hash(chunk)
+        key = base_key + str(hsh)
+        keys.append(key)
+        if timeout:
+            cache.set(key, chunk, timeout)
+        else:
+            cache.set(key, chunk)
+    final_key = uuid4()
+    initial = (upload.name, keys)
     if timeout:
-        cache.set(key + str(hsh), upload, timeout)
+        cache.set(final_key, initial, timeout)
     else:
-        cache.set(key + str(hsh), upload)
-    return key + str(hsh)
+        cache.set(final_key, initial)
+    return final_key
 
 
 
 def get_file(key, cache_name='default'):
     cache = caches[cache_name]
-    return cache.get(key, None)
+    filename, keys = cache.get(key, None)
+    if not keys:
+        return None
+
+    chunks = b''.join([cache.get(key) for key in keys])
+    c_file = ContentFile(chunks)
+    c_file.name = filename
+    return c_file
