@@ -45,7 +45,6 @@ def get_file(key, cache_name='default'):
     if not keys:
         return None
 
-    chunks = io.BytesIO([cache.get(key) for key in keys])
-    c_file = ContentFile(chunks)
+    c_file = ContentFile(b''.join(cache.get(key) for key in keys))
     c_file.name = filename
     return c_file
